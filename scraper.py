@@ -1,43 +1,52 @@
 #!/usr/bin/env python
 
-from lxml import html
+from lxml import etree, html
+from lxml.etree import tostring
 import requests
 
-page = requests.get('http://www.writingexcuses.com/')
-tree = html.fromstring(page.content)
+def getRawBookData(url):
+    page = requests.get(url)
+    tree = html.fromstring(page.content)
 
-bookData = tree.xpath(
-'//div[@class="wx_audiobook"]/p/em/a/text() | ' +
-'//div[@class="wx_audiobook"]/p/a/text() | ' +
-'//div[@class="wx_audiobook"]/p/a/em/text()'
-)
+    retVal = []
 
-authorData = tree.xpath('//div[@class="wx_audiobook"]/p/text()')
-cleanAuthorData = []
-for name in authorData:
-    if len(name) > 3:
-        begin = name.find("by") + 3
-        name = name[begin:]
-        comma = name.find(",")
+    audiobookList = tree.xpath('//div[@class="wx_audiobook"]')
+    for book in audiobookList:
+        bookInfo = findTitleAndAuthor(book)
+        bookInfo[0] = trimTitleData(bookInfo[0])
+        bookInfo[1] = trimAuthorData(bookInfo[1])
+        retVal.append(bookInfo)
+    return(retVal)
+
+def trimTitleData(title):
+    title = title.replace(u'\xa0', u' ')
+    comma = title.find(",")
+    if comma > 0:
+        title = title[:comma]
+    return title
+
+def trimAuthorData(author):
+    author = author.replace(u'\xa0', u' ')
+    begin = author.find("by") + 3
+    if begin > 0:
+        author = author[begin:]
+        comma = author.find(",")
         if comma > 0:
-            name = name[:comma]
-        cleanAuthorData.append(name)
+            author = author[:comma]
+        if author[-1] == ".":
+            author = author[:-1]
+        return author
+    print("trimAuthorData failed on ", author)
 
-combinedData = []
-if len(bookData) == len(cleanAuthorData):
-    for index, val in enumerate(bookData):
-        print(index)
-        print(bookData[index])
-        print(cleanAuthorData[index])
-        entry = [bookData[index], cleanAuthorData[index]]
-        combinedData.append(entry)
-
-print(combinedData)
-
-"""expectedResult = ["The Savage Dead", "Plea",
-"Seventy Maxims of Maximally Effective Mercenaries",
-"Contracted Defense", "Vicious",
-"An Astronaut’s Guide to Life on Earth: What Going to Space Taught Me About " +
-"Ingenuity, Determination, and Being Prepared for Anything"
-]
-print(expectedResult)"""
+def findTitleAndAuthor(bookData):
+    titleList = []
+    authorList = []
+    for el in bookData.iter():
+        if el.text:
+            titleList.append(el.text)
+        if el.tail and len(el.tail.strip()) > 0:
+            authorList.append(el.tail)
+    if len(authorList) == 0:
+        splitList = titleList[0].split(",")
+        return [splitList[0], splitList[1]]
+    return [titleList[0], authorList[0]]
