@@ -4,7 +4,7 @@ from lxml import etree, html
 from lxml.etree import tostring
 import requests
 
-def getRawBookData(url):
+def getBookData(url):
     page = requests.get(url)
     tree = html.fromstring(page.content)
 
@@ -12,18 +12,29 @@ def getRawBookData(url):
 
     audiobookList = tree.xpath('//div[@class="wx_audiobook"]')
     for book in audiobookList:
-        bookInfo = findTitleAndAuthor(book)
-        bookInfo[0] = trimTitleData(bookInfo[0])
-        bookInfo[1] = trimAuthorData(bookInfo[1])
+        bookInfo = getTitleAndAuthor(book)
         retVal.append(bookInfo)
     return(retVal)
 
-def trimTitleData(title):
-    title = title.replace(u'\xa0', u' ')
-    comma = title.find(",")
-    if comma > 0:
-        title = title[:comma]
-    return title
+def getTitleAndAuthor(bookData):
+    titleList = []
+    authorList = []
+    retVal = []
+
+    for el in bookData.iter():
+        if el.text:
+            titleList.append(el.text)
+        if el.tail and len(el.tail.strip()) > 0:
+            authorList.append(el.tail)
+
+    if len(authorList) == 0:
+        splitList = titleList[0].split(",")
+        retVal.append(trimTitleData(splitList[0]))
+        retVal.append(trimAuthorData(splitList[1]))
+    else:
+        retVal.append(trimTitleData(titleList[0]))
+        retVal.append(trimAuthorData(authorList[0]))
+    return retVal
 
 def trimAuthorData(author):
     author = author.replace(u'\xa0', u' ')
@@ -38,15 +49,9 @@ def trimAuthorData(author):
         return author
     print("trimAuthorData failed on ", author)
 
-def findTitleAndAuthor(bookData):
-    titleList = []
-    authorList = []
-    for el in bookData.iter():
-        if el.text:
-            titleList.append(el.text)
-        if el.tail and len(el.tail.strip()) > 0:
-            authorList.append(el.tail)
-    if len(authorList) == 0:
-        splitList = titleList[0].split(",")
-        return [splitList[0], splitList[1]]
-    return [titleList[0], authorList[0]]
+def trimTitleData(title):
+    title = title.replace(u'\xa0', u' ')
+    comma = title.find(",")
+    if comma > 0:
+        title = title[:comma]
+    return title

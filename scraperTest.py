@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
-import scraper
 from lxml import html
 import requests
 import unittest
 
+import scraper
+
 class ScraperTest(unittest.TestCase):
     def test_scrapeInfo(self):
-        data = scraper.getRawBookData(seasonTenUrl)
-        
+        data = scraper.getBookData(seasonTenUrl)
+
         self.assertEqual(len(data), len(seasonTenData))
         self.assertEqual(data, seasonTenData)
 
