@@ -4,12 +4,19 @@ from lxml import etree, html
 from lxml.etree import tostring
 import requests
 
-def getBookData(url):
-    page = requests.get(url)
-    tree = html.fromstring(page.content)
+def scrapeBooks(url):
+    pageContent = downloadPage(url)
+    BookData = getBookData(pageContent)
+    return BookData
 
+def downloadPage(url):
+    page = requests.get(url)
+    return page.content
+
+def getBookData(pageContent):
     retVal = []
 
+    tree = html.fromstring(pageContent)
     audiobookList = tree.xpath('//div[@class="wx_audiobook"]')
     for book in audiobookList:
         bookInfo = getTitleAndAuthor(book)
